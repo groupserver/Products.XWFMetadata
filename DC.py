@@ -45,6 +45,17 @@ class DCTitle(XWFMetadataString):
     
     requiredError = 'A title must be specified'
     
+class DCTitleSelection(XWFMetadataStringSelection):
+    namespace = 'http://purl.org/dc/elements/1.1/title'
+
+    indexName = 'dc_title'
+    alternativeIndexNames = ['title']
+    
+    label = 'Title'
+    hint = 'Please enter the title'
+    
+    requiredError = 'A title must be specified'    
+
 class DCCreated(XWFMetadataDateTime):
     namespace = 'http://purl.org/dc/terms/valid'
     
@@ -66,6 +77,7 @@ class DCValid(XWFMetadataDateTime):
     
 class DCDescription(XWFMetadataText):
     namespace = 'http://purl.org/dc/elements/1.1/description'
+    presentationNamespace = 'http://www.w3.org/TR/xhtml1'
     
     indexName = 'dc_description'
     

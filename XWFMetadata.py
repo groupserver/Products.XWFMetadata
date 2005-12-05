@@ -7,6 +7,7 @@ from AccessControl.Role import RoleManager
 from AccessControl.Owned import Owned
 from OFS.SimpleItem import SimpleItem
 from zExceptions import BadRequest
+from types import StringType
 import DateTime
 
 from Products.XWFCore.XWFUtils import getToolByName
@@ -15,7 +16,7 @@ class Record:
     pass
     
 class XWFMetadataValidation:
-    def validate(self, val):
+    def validate(self, context, val):
         #tidy = getattr(self, 'tidy', lambda x: x)
         #val = tidy(val)
         
@@ -23,15 +24,15 @@ class XWFMetadataValidation:
         if required and not val:
             return (None, self.requiredError)
         
-        validator = getattr(self, 'validator', lambda x: (x, None))
-        val, message = validator(val)
+        validator = getattr(self, 'validator', lambda y, x: (x, None))
+        val, message = validator(context, val)
         
         return val, message
         
 class XWFMetadataForm:
-    def xform_data(self, form):
+    def xform_data(self, context, form):
         if form.get('__populate__', True):
-            xf_value = self.current_xform_value(form)
+            xf_value = self.current_xform_value(context, form)
         else:
             xf_value = None
             
@@ -42,7 +43,7 @@ class XWFMetadataForm:
         
         return f
     
-    def current_xform_value(self, form):
+    def current_xform_value(self, context, form):
         val = form.get(getattr(self, 'indexName', self.id), None)
         
         if not val:
@@ -86,8 +87,11 @@ class XWFMetadataBase(SimpleItem, XWFMetadataValidation, XWFMetadataForm):
         catalog = getToolByName(context, 'Catalog')
         indexes = catalog.indexes()
         
-        index_id = self.indexName
-        index_type = self.indexType
+        index_id = getattr(self, 'indexName', None)
+        index_type = getattr(self, 'indexType', None)
+        if not index_id or not index_type:
+            return
+            
         # skip it if it's already there
         if index_id not in indexes:
             if index_type == 'ZCTextIndex':
@@ -109,7 +113,7 @@ class XWFMetadataCollection(XWFMetadataBase):
     propertyDataType = 'ulines'
     
 class XWFMetadataURLs(XWFMetadataCollection):
-    def xform_control(self, model_id, cssclass='text'):
+    def xform_control(self, context, model_id, cssclass='text'):
         f = '''<xf:textarea model="%s" %s="%s" class="%s">
                    <xf:label>%s</xf:label>
                    <xf:hint>%s</xf:hint>
@@ -117,14 +121,56 @@ class XWFMetadataURLs(XWFMetadataCollection):
                                     self.indexName, cssclass,
                                     self.label, self.hint)    
         return f
-       
+
+class XWFMetadataSelection(XWFMetadataBase):
+    def __init__( self, required=False, automatic=False, setDefault=None,
+                        selections=() ):
+        XWFMetadataBase.__init__(self, required, automatic, setDefault)
+        self.selections = selections
+
+    def xform_control(self, context, model_id, cssclass='text'):
+        item = """<xf:item>
+                        <xf:label>%s</xf:label>
+                        <xf:value>%s</xf:value>
+                  </xf:item>"""
+        items = []
+        # if selections is a string, get the method it corresponds to
+        if isinstance(self.selections, StringType):
+            selections = getattr(context, self.selections)()
+        else:
+            selections = self.selections
+        
+        for selection in selections:
+            items.append(item % selection)
+            
+        f = '''<xf:select1 model="%s" %s="%s"
+                    appearance="minimal" class="%s">
+                    <xf:label>%s</xf:label>
+                    <xf:hint>%s</xf:hint>
+                    <xf:item>
+                        <xf:label>----Select----</xf:label>
+                        <xf:value></xf:value>
+                    </xf:item>
+                    %s
+               </xf:select1>''' % (model_id, self.required and 'bind' or 'ref',
+                                   self.indexName, cssclass, self.label,
+                                   self.hint, '\n'.join(items))
+                                   
+        return f
+
+class XWFMetadataStringSelection(XWFMetadataSelection):
+    indexType = 'KeywordIndex'
+    
+    xsdDataType = 'string'
+    propertyDataType = 'ustring'
+
 class XWFMetadataString(XWFMetadataBase):
     indexType = 'KeywordIndex'
     
     xsdDataType = 'string'
     propertyDataType = 'ustring'
     
-    def xform_control(self, model_id, cssclass='text'):
+    def xform_control(self, context, model_id, cssclass='text'):
         f = '''<xf:input model="%s" %s="%s" class="%s">
                    <xf:label>%s</xf:label>
                    <xf:hint>%s</xf:hint>
@@ -139,7 +185,7 @@ class XWFMetadataText(XWFMetadataBase):
     xsdDataType = 'string'
     propertyDataType = 'utext'
     
-    def xform_control(self, model_id, cssclass='text'):
+    def xform_control(self, context, model_id, cssclass='text'):
         f = '''<xf:textarea model="%s" %s="%s" class="%s">
                    <xf:label>%s</xf:label>
                    <xf:hint>%s</xf:hint>
@@ -157,7 +203,7 @@ class XWFMetadataDateTime(XWFMetadataBase):
     validationError = ('Date was specified, but should be in the format '
                        'eg. 10 Jun 2005 12:00pm')
     
-    def validator(self, val):
+    def validator(self, context, val):
         try:
             DateTime.DateTime(val)
         except DateTime.DateTime.SyntaxError:
@@ -165,7 +211,7 @@ class XWFMetadataDateTime(XWFMetadataBase):
         
         return val, None
         
-    def xform_control(self, model_id, cssclass='text'):
+    def xform_control(self, context, model_id, cssclass='text'):
         f = '''<xf:date model="%s" %s="%s" class="%s">
                    <xf:label>%s</xf:label>
                    <xf:hint>%s</xf:hint>
@@ -174,6 +220,25 @@ class XWFMetadataDateTime(XWFMetadataBase):
         return f
 
     default = DateTime.DateTime
+
+class File(XWFMetadataString):
+    indexName = 'file'
+    
+    xsdDataType = 'string'
+    propertyDataType = 'file'
+    
+    label = 'File'
+    hint = 'Select the file you wish to upload'
+    
+    requiredError = 'You must specify a file to upload'
+    
+    def xform_control(self, context, model_id, cssclass='text'):
+        f = '''<xf:upload model="%s" %s="%s" class="%s">
+                   <xf:label>%s</xf:label>
+                   <xf:hint>%s</xf:hint>
+               </xf:upload>''' % (model_id, self.required and 'bind' or 'ref',
+                                self.indexName, cssclass, self.label, self.hint)
+        return f
 
 class Tags(XWFMetadataString):
     indexType = 'KeywordIndex'
