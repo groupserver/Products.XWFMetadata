@@ -6,7 +6,7 @@ class XWFRoleManagement(XWFMetadataValidation):
     meta_type = 'XWF Security Metadata'
     id = 'xwf_roles'
     
-    label = "Visible to Roles"
+    label = "Visible to roles"
     hint = "To which roles should this item be visible"
     
     required = True
