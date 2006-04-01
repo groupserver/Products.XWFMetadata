@@ -35,6 +35,7 @@ class XWFRoleManagement(XWFMetadataValidation):
         # it
         try:
             roles.remove('Manager')
+            roles.remove('Owner')
         except:
             pass
         
@@ -50,7 +51,7 @@ class XWFRoleManagement(XWFMetadataValidation):
         
         items = []
         for role in obj.valid_roles():
-            if role != 'Manager':
+            if role not in ('Manager', 'Owner'):
                 items.append(x % (role, role))
         
         f = """<xf:select appearance="minimal"
@@ -75,8 +76,10 @@ class XWFRoleManagement(XWFMetadataValidation):
         if assume_acquire and roles == new_roles:
             return
         
-        # We _always_ want the Manager role added, otherwise we might never get
-        # indexed!
+        # We _always_ want the Manager, Owner and Viewer roles added, 
+        # otherwise we might never get indexed, and group management won't work!
         new_roles.append('Manager')
+        new_roles.append('Owner')
+        new_roles.append('Viewer')
         
         obj.manage_permission(self.permission_to_manage, new_roles)

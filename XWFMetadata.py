@@ -22,7 +22,7 @@ class XWFMetadataValidation:
         
         required = getattr(self, 'required', None)
         if required and not val:
-            return (None, self.requiredError)
+            return (None, getattr(self, 'requiredError', 'no error message specified'))
         
         validator = getattr(self, 'validator', lambda y, x: (x, None))
         val, message = validator(context, val)
@@ -200,6 +200,8 @@ class XWFMetadataDateTime(XWFMetadataBase):
     xsdDataType = 'dateTime'
     propertyDataType = 'date'
     
+    requiredError = 'You must specify a date'
+    
     validationError = ('Date was specified, but should be in the format '
                        'eg. 10 Jun 2005 12:00pm')
     
@@ -246,6 +248,8 @@ class Tags(XWFMetadataString):
     
     xsdDataType = 'string'
     propertyDataType = 'utokens'
+    
+    requiredError = 'You must specify one or more tags'
     
     label = 'Tags'
     hint = 'One or more space separated keywords, which best represent this item'
