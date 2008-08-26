@@ -1,12 +1,6 @@
 import types
 
-from OFS.OrderedFolder import OrderedFolder
-from OFS.ObjectManager import ObjectManager
-from AccessControl import Role, getSecurityManager, ClassSecurityInfo
-from AccessControl.Role import RoleManager
-from AccessControl.Owned import Owned
 from OFS.SimpleItem import SimpleItem
-from zExceptions import BadRequest
 from types import StringType
 import DateTime
 
@@ -17,9 +11,6 @@ class Record:
     
 class XWFMetadataValidation:
     def validate(self, context, val):
-        #tidy = getattr(self, 'tidy', lambda x: x)
-        #val = tidy(val)
-        
         required = getattr(self, 'required', None)
         if required and not val:
             return (None, getattr(self, 'requiredError', 'no error message specified'))

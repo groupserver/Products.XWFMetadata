@@ -2,8 +2,6 @@ from AccessControl import getSecurityManager
 
 from Products.XWFMetadata.XWFMetadata import *
 
-import types
-
 class LinkedResources(XWFMetadataURLs):
     indexName = 'linked_resources'
     
